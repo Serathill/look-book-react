@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +19,6 @@ const Index = () => {
   const userVideoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
 
-  const SUPABASE_FUNCTION_URL = 'https://lvakpupzkvrpevqxtywy.supabase.co/functions/v1/create-tavus-conversation';
   const PERSONA_ID = 'p4263ef5a7df';
   const REPLICA_ID = 'rb17cf590e15';
 
@@ -29,23 +27,18 @@ const Index = () => {
     setIsCreatingConversation(true);
     
     try {
-      // Call the Supabase Edge Function to create a new Tavus conversation
-      const response = await fetch(SUPABASE_FUNCTION_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      // Call the Supabase Edge Function using the client library
+      const { data, error } = await supabase.functions.invoke('create-tavus-conversation', {
+        body: {
           personaId: PERSONA_ID,
           replicaId: REPLICA_ID,
-        }),
+        },
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to create conversation.');
+      if (error) {
+        throw new Error(error.message || 'Failed to create conversation.');
       }
 
-      const data = await response.json();
       const conversationUrl = data.conversationUrl;
 
       console.log("Conversation created:", conversationUrl);
