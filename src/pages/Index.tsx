@@ -1,11 +1,21 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [isVideoCallActive, setIsVideoCallActive] = useState(false);
   const [isLandingVisible, setIsLandingVisible] = useState(true);
+  const [showSignupForm, setShowSignupForm] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const userVideoRef = useRef<HTMLVideoElement>(null);
+  const { toast } = useToast();
 
   const handleConsultationClick = () => {
     console.log("Style consultation started!");
@@ -21,8 +31,48 @@ const Index = () => {
   const handleEndDemo = () => {
     console.log("Demo ended!");
     setIsVideoCallActive(false);
-    setIsLandingVisible(true);
+    setShowSignupForm(true);
     stopUserWebcam();
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`
+        }
+      });
+
+      if (error) {
+        toast({
+          title: "Signup Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success!",
+          description: "Please check your email to confirm your account.",
+        });
+        setShowSignupForm(false);
+        setIsLandingVisible(true);
+        setEmail("");
+        setPassword("");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const startUserWebcam = async () => {
@@ -88,6 +138,55 @@ const Index = () => {
             End Demo
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  if (showSignupForm) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold text-center">Sign Up</CardTitle>
+            <CardDescription className="text-center">
+              Create your account to continue with AI Style Consultation
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSignup} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                />
+              </div>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isLoading}
+              >
+                {isLoading ? "Creating Account..." : "Sign Up"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     );
   }
