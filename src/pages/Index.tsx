@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import DailyIframe from '@daily-co/daily-js';
 
 const Index = () => {
   const [isVideoCallActive, setIsVideoCallActive] = useState(false);
@@ -14,22 +15,91 @@ const Index = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isCreatingConversation, setIsCreatingConversation] = useState(false);
+  const [callFrame, setCallFrame] = useState<any>(null);
   const userVideoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
 
-  const handleConsultationClick = () => {
+  const SUPABASE_FUNCTION_URL = 'https://lvakpupzkvrpevqxtywy.supabase.co/functions/v1/create-tavus-conversation';
+  const PERSONA_ID = 'p4263ef5a7df';
+  const REPLICA_ID = 'rb17cf590e15';
+
+  const handleConsultationClick = async () => {
     console.log("Style consultation started!");
-    // Fade out landing page
-    setIsLandingVisible(false);
-    // Show video call after fade transition
-    setTimeout(() => {
-      setIsVideoCallActive(true);
-      startUserWebcam();
-    }, 300);
+    setIsCreatingConversation(true);
+    
+    try {
+      // Call the Supabase Edge Function to create a new Tavus conversation
+      const response = await fetch(SUPABASE_FUNCTION_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          personaId: PERSONA_ID,
+          replicaId: REPLICA_ID,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create conversation.');
+      }
+
+      const data = await response.json();
+      const conversationUrl = data.conversationUrl;
+
+      console.log("Conversation created:", conversationUrl);
+
+      // Fade out landing page
+      setIsLandingVisible(false);
+      
+      // Show video call after fade transition
+      setTimeout(async () => {
+        setIsVideoCallActive(true);
+        await startTavusCall(conversationUrl);
+        startUserWebcam();
+      }, 300);
+
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+      toast({
+        title: "Error",
+        description: "Could not start the style consultation. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingConversation(false);
+    }
+  };
+
+  const startTavusCall = async (conversationUrl: string) => {
+    try {
+      const frame = DailyIframe.createFrame(document.getElementById('tavus-frame'), {
+        showLeaveButton: false,
+      });
+
+      await frame.join({ url: conversationUrl });
+      setCallFrame(frame);
+    } catch (error) {
+      console.error("Error joining Tavus call:", error);
+      toast({
+        title: "Error",
+        description: "Could not join the video consultation.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleEndDemo = () => {
     console.log("Demo ended!");
+    
+    // Leave the Daily call if active
+    if (callFrame) {
+      callFrame.leave();
+      callFrame.destroy();
+      setCallFrame(null);
+    }
+    
     setIsVideoCallActive(false);
     setShowSignupForm(true);
     stopUserWebcam();
@@ -100,19 +170,22 @@ const Index = () => {
   useEffect(() => {
     return () => {
       stopUserWebcam();
+      if (callFrame) {
+        callFrame.leave();
+        callFrame.destroy();
+      }
     };
-  }, []);
+  }, [callFrame]);
 
   if (isVideoCallActive) {
     return (
       <div className="min-h-screen bg-gray-900 flex flex-col">
         {/* Main Tavus Video Container */}
         <div className="flex-1 relative">
-          <iframe
-            src="https://tavus.daily.co/c48b5a164603c48a"
-            className="w-full h-full border-none"
-            allow="camera; microphone; fullscreen; display-capture"
-            title="Tavus AI Stylist Consultation"
+          <div 
+            id="tavus-frame" 
+            className="w-full h-full"
+            style={{ minHeight: '600px' }}
           />
           
           {/* Picture-in-Picture User Webcam */}
@@ -200,10 +273,11 @@ const Index = () => {
       <div className="text-center">
         <Button 
           onClick={handleConsultationClick}
+          disabled={isCreatingConversation}
           size="lg"
-          className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-8 py-4 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ease-in-out animate-pulse"
+          className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-8 py-4 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ease-in-out animate-pulse disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
         >
-          Begin Your Style Consultation
+          {isCreatingConversation ? 'Initializing...' : 'Begin Your Style Consultation'}
         </Button>
       </div>
     </div>
