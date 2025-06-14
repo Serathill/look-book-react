@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,6 +62,15 @@ const Index = () => {
       });
     } finally {
       setIsCreatingConversation(false);
+    }
+  };
+
+  const handleDevSetup = async () => {
+    console.log("Setup function called.");
+    try {
+      await supabase.functions.invoke('setup-adrian-persona');
+    } catch (error) {
+      console.error("Error calling setup function:", error);
     }
   };
 
@@ -264,7 +272,7 @@ const Index = () => {
         isLandingVisible ? 'opacity-100' : 'opacity-0'
       }`}
     >
-      <div className="text-center">
+      <div className="text-center space-y-4">
         <Button 
           onClick={handleConsultationClick}
           disabled={isCreatingConversation}
@@ -272,6 +280,15 @@ const Index = () => {
           className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-8 py-4 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ease-in-out animate-pulse disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
         >
           {isCreatingConversation ? 'Initializing...' : 'Begin Your Style Consultation'}
+        </Button>
+        
+        <Button 
+          onClick={handleDevSetup}
+          variant="outline"
+          size="sm"
+          className="text-yellow-400 border-yellow-400 hover:bg-yellow-400 hover:text-black"
+        >
+          DEV TOOL: Create Persona
         </Button>
       </div>
     </div>
