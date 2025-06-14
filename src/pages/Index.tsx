@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +20,7 @@ const Index = () => {
   const userVideoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
 
-  const PERSONA_ID = 'p4263ef5a7df';
+  const PERSONA_ID = 'p4746574ac52';
   const REPLICA_ID = 'rb17cf590e15';
 
   const handleConsultationClick = async () => {
